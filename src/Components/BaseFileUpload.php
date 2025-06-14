@@ -34,6 +34,8 @@ class BaseFileUpload extends Field
 
     protected bool | Closure $isOpenable = false;
 
+    protected bool | Closure $isPasteable = false;
+
     protected bool | Closure $isPreviewable = true;
 
     protected bool | Closure $isReorderable = false;
@@ -113,7 +115,7 @@ class BaseFileUpload extends Field
                         return false;
                     }
                 })
-                ->mapWithKeys(static fn (string $file): array => [((string) Str::uuid()) => $file])
+                ->mapWithKeys(static fn(string $file): array => [((string) Str::uuid()) => $file])
                 ->all();
 
             $component->state($files);
@@ -269,11 +271,11 @@ class BaseFileUpload extends Field
 
             if (
                 $component->shouldMoveFiles() &&
-                ($component->getDiskName() == (fn (): string => $this->disk)->call($file))
+                ($component->getDiskName() == (fn(): string => $this->disk)->call($file))
             ) {
                 $newPath = trim($component->getDirectory() . '/' . $component->getUploadedFileNameForStorage($file), '/');
 
-                $component->getDisk()->move((fn (): string => $this->path)->call($file), $newPath);
+                $component->getDisk()->move((fn(): string => $this->path)->call($file), $newPath);
 
                 return $newPath;
             }
@@ -369,6 +371,14 @@ class BaseFileUpload extends Field
         return $this;
     }
 
+
+    public function pasteable(bool | Closure $condition = true): static
+    {
+        $this->isPasteable = $condition;
+
+        return $this;
+    }
+
     public function previewable(bool | Closure $condition = true): static
     {
         $this->isPreviewable = $condition;
@@ -411,7 +421,7 @@ class BaseFileUpload extends Field
      */
     public function disablePreview(bool | Closure $condition = true): static
     {
-        $this->previewable(fn (BaseFileUpload $component): bool => ! $component->evaluate($condition));
+        $this->previewable(fn(BaseFileUpload $component): bool => ! $component->evaluate($condition));
 
         return $this;
     }
@@ -596,6 +606,11 @@ class BaseFileUpload extends Field
         return (bool) $this->evaluate($this->isOpenable);
     }
 
+    public function isPasteable(): bool
+    {
+        return (bool) $this->evaluate($this->isPasteable);
+    }
+
     public function isPreviewable(): bool
     {
         return (bool) $this->evaluate($this->isPreviewable);
@@ -733,7 +748,7 @@ class BaseFileUpload extends Field
         }
 
         $rules[] = function (string $attribute, array $value, Closure $fail): void {
-            $files = array_filter($value, fn (TemporaryUploadedFile | string $file): bool => $file instanceof TemporaryUploadedFile);
+            $files = array_filter($value, fn(TemporaryUploadedFile | string $file): bool => $file instanceof TemporaryUploadedFile);
 
             $name = $this->getName();
 
@@ -834,7 +849,7 @@ class BaseFileUpload extends Field
         $fileKeys = array_flip($fileKeys);
 
         $state = collect($this->getState())
-            ->sortBy(static fn ($file, $fileKey) => $fileKeys[$fileKey] ?? null) // $fileKey may not be present in $fileKeys if it was added to the state during the reorder call
+            ->sortBy(static fn($file, $fileKey) => $fileKeys[$fileKey] ?? null) // $fileKey may not be present in $fileKeys if it was added to the state during the reorder call
             ->all();
 
         $this->state($state);
@@ -949,7 +964,7 @@ class BaseFileUpload extends Field
         $statePath = $this->fileNamesStatePath;
 
         if (filled($statePath)) {
-            $state = $this->evaluate(fn (Get $get) => $get($statePath));
+            $state = $this->evaluate(fn(Get $get) => $get($statePath));
         }
 
         if (blank($state) && $this->isMultiple()) {
